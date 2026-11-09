@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartCicilan Pro - Pengelola Tagihan & Cicilan</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Styling scrollbar halus */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+  <!-- Navbar -->
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 py-3.5 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white shadow-md">
+          <i data-lucide="wallet-cards" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight">SmartCicilan <span class="text-xs bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 px-2 py-0.5 rounded-full ml-1">PRO</span></h1>
+          <p class="text-xs text-slate-400">Monitoring BCA, Tokopedia & Finansial</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Backup & Restore menu dropdown -->
+        <button onclick="toggleDataMenu()" class="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition text-xs flex items-center gap-1.5" title="Cadangkan Data">
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Data / Backup</span>
+        </button>
+
+        <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl shadow-md flex items-center gap-1.5 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dropdown Data Backup Modal -->
+  <div id="dataMenu" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Kelola Cadangan Data</h3>
+        <button onclick="toggleDataMenu()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500">Simpan cadangan ke file lokal agar data aman saat ganti browser atau HP.</p>
+      
+      <div class="space-y-2">
+        <button onclick="exportToJSON()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center justify-between">
+          <span class="flex items-center gap-2"><i data-lucide="download" class="w-4 h-4 text-indigo-600"></i> Download Cadangan (JSON)</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+        </button>
+
+        <button onclick="exportToCSV()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center justify-between">
+          <span class="flex items-center gap-2"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Download Excel (CSV)</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+        </button>
+
+        <label class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center justify-between cursor-pointer">
+          <span class="flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4 text-amber-600"></i> Pulihkan Data (Import JSON)</span>
+          <input type="file" id="fileInput" accept=".json" onchange="importFromJSON(event)" class="hidden">
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Konten Utama -->
+  <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-1">
+
+    <!-- Ringkasan Finansial -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+          <i data-lucide="receipt" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium">Beban Bulan Ini</p>
+          <h3 id="statMonthly" class="text-lg font-bold text-slate-900 leading-tight">Rp 0</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+          <i data-lucide="hourglass" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium">Sisa Total Utang</p>
+          <h3 id="statTotalRemaining" class="text-lg font-bold text-slate-900 leading-tight">Rp 0</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+          <i data-lucide="check-circle" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium">Sudah Terbayar</p>
+          <h3 id="statTotalPaid" class="text-lg font-bold text-slate-900 leading-tight">Rp 0</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+          <i data-lucide="clock-alert" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium">Jatuh Tempo Dekat (< 5 Hari)</p>
+          <h3 id="statDueSoon" class="text-lg font-bold text-slate-900 leading-tight">0 Tagihan</h3>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Filter & Pencarian -->
+    <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="setFilter('active')" id="tabActive" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">Aktif</button>
+        <button onclick="setFilter('dueSoon')" id="tabDueSoon" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">Jatuh Tempo Dekat</button>
+        <button onclick="setFilter('completed')" id="tabCompleted" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">Lunas</button>
+        <button onclick="setFilter('all')" id="tabAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">Semua</button>
+      </div>
+
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+        <input type="text" id="searchInput" oninput="renderList()" placeholder="Cari nama barang atau bank..." class="w-full sm:w-64 pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+    </div>
+
+    <!-- Grid List Cicilan -->
+    <div id="installmentContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Items generated dynamically -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 mt-4">
+      <div class="inline-flex p-4 bg-indigo-50 text-indigo-500 rounded-2xl mb-3">
+        <i data-lucide="clipboard-x" class="w-8 h-8"></i>
+      </div>
+      <h4 class="text-base font-semibold text-slate-700">Tidak ada data cicilan</h4>
+      <p class="text-xs text-slate-400 mt-1">Coba ganti filter atau tambahkan catatan cicilan baru.</p>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+    SmartCicilan Pro &bull; Data tersimpan aman di browser Anda
+  </footer>
+
+  <!-- Modal Form Tambah / Edit -->
+  <div id="modalForm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl overflow-y-auto max-h-[92vh]">
+      <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <div>
+          <h3 id="modalTitle" class="text-base font-bold text-slate-800">Tambah Cicilan Baru</h3>
+          <p class="text-xs text-slate-500">Masukkan rincian cicilan dan estimasi pembayaran</p>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="cicilanForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <input type="hidden" id="editId">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Barang / Transaksi *</label>
+          <input type="text" id="itemName" required placeholder="Contoh: AC Daikin 1 PK Ruang Tamu" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Bank / Merchant *</label>
+            <input type="text" id="provider" list="providerList" required placeholder="Pilih / Tulis..." class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+            <datalist id="providerList">
+              <option value="BCA (Kartu Kredit)">
+              <option value="Tokopedia / GoPayLater">
+              <option value="ShopeePayLater">
+              <option value="Mandiri (Kartu Kredit)">
+              <option value="BRI Ceria / CC">
+              <option value="Kredivo">
+              <option value="Home Credit">
+            </datalist>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Jatuh Tempo (Tgl 1-31)</label>
+            <input type="number" id="dueDay" min="1" max="31" placeholder="Contoh: 15" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <!-- Mode Bantuan Hitung -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-slate-600">Kalkulator Simulasi Otomatis</span>
+            <span class="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-medium">Bisa 0% / Bunga</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-1">Total Pembelian (Rp)</label>
+              <input type="number" id="calcPrincipal" oninput="calculateMonthly()" placeholder="Contoh: 4800000" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-1">Bunga Total / Admin (%)</label>
+              <input type="number" step="0.1" id="calcInterest" oninput="calculateMonthly()" value="0" placeholder="0 jika promo 0%" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Total Tenor (Bulan) *</label>
+            <input type="number" id="totalTenor" oninput="calculateMonthly()" required min="1" placeholder="Contoh: 12" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Cicilan / Bulan (Rp) *</label>
+            <input type="number" id="monthlyAmount" required placeholder="Contoh: 400000" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Sudah Dibayar (Bulan)</label>
+            <input type="number" id="paidTenor" min="0" value="0" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Bulan Mulai Cicilan</label>
+            <input type="month" id="startMonth" class="w-full border border-slate-200 rounded-xl p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan</label>
+          <input type="text" id="notes" placeholder="Contoh: Kartu Kredit BCA Visa Platinum / Limit Rp 15jt" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl text-xs transition">Batal</button>
+          <button type="submit" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-xs shadow-md transition">Simpan Cicilan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // State Aplikasi
+    let currentFilter = 'active';
+    let installments = JSON.parse(localStorage.getItem('smart_cicilan_data')) || [
+      {
+        id: '1',
+        itemName: 'AC Daikin Inverter 1 PK',
+        provider: 'BCA (Kartu Kredit)',
+        dueDay: 15,
+        monthlyAmount: 485000,
+        totalTenor: 12,
+        paidTenor: 4,
+        startMonth: '2026-07',
+        notes: 'Promo 0% Blibli via Kartu Kredit BCA'
+      },
+      {
+        id: '2',
+        itemName: 'Kulkas 2 Pintu Sharp',
+        provider: 'Tokopedia / GoPayLater',
+        dueDay: 10,
+        monthlyAmount: 320000,
+        totalTenor: 6,
+        paidTenor: 5,
+        startMonth: '2026-06',
+        notes: 'Promo cashback 50rb'
+      }
+    ];
+
+    function saveStorage() {
+      localStorage.setItem('smart_cicilan_data', JSON.stringify(installments));
+    }
+
+    function formatRupiah(num) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
+    }
+
+    // Auto-calculate cicilan per bulan jika user mengisi total harga dan bunga
+    function calculateMonthly() {
+      const principal = parseFloat(document.getElementById('calcPrincipal').value) || 0;
+      const interestRate = parseFloat(document.getElementById('calcInterest').value) || 0;
+      const tenor = parseInt(document.getElementById('totalTenor').value) || 0;
+
+      if (principal > 0 && tenor > 0) {
+        const totalInterest = principal * (interestRate / 100);
+        const totalPayable = principal + totalInterest;
+        const monthly = Math.round(totalPayable / tenor);
+        document.getElementById('monthlyAmount').value = monthly;
+      }
+    }
+
+    // Hitung sisa hari ke jatuh tempo
+    function getDueStatus(dueDay) {
+      if (!dueDay) return null;
+      const today = new Date();
+      const currentDay = today.getDate();
+      const diff = dueDay - currentDay;
+
+      if (diff === 0) return { label: 'Hari Ini!', color: 'bg-rose-500 text-white animate-pulse', isUrgent: true };
+      if (diff > 0 && diff <= 4) return { label: `${diff} hari lagi`, color: 'bg-amber-100 text-amber-800 border border-amber-300', isUrgent: true };
+      if (diff < 0) return { label: `Lewat tgl (${dueDay})`, color: 'bg-slate-100 text-slate-500', isUrgent: false };
+      return { label: `Tgl ${dueDay}`, color: 'bg-indigo-50 text-indigo-700', isUrgent: false };
+    }
+
+    // Hitung proyeksi bulan lunas
+    function getCompletionDate(startMonthStr, totalTenor) {
+      if (!startMonthStr) return null;
+      const [year, month] = startMonthStr.split('-').map(Number);
+      const date = new Date(year, month - 1 + totalTenor);
+      return date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      const tabs = ['active', 'dueSoon', 'completed', 'all'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (btn) {
+          if (t === filter) {
+            btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition";
+          }
+        }
+      });
+      renderList();
+    }
+
+    function renderList() {
+      const container = document.getElementById('installmentContainer');
+      const emptyState = document.getElementById('emptyState');
+      const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
+
+      container.innerHTML = '';
+
+      let totalMonthly = 0;
+      let totalRemaining = 0;
+      let totalPaidAll = 0;
+      let urgentDueCount = 0;
+
+      // Filter list
+      const filtered = installments.filter(item => {
+        const isCompleted = item.paidTenor >= item.totalTenor;
+        const dueStatus = getDueStatus(item.dueDay);
+        const matchesSearch = item.itemName.toLowerCase().includes(searchKeyword) || item.provider.toLowerCase().includes(searchKeyword);
+
+        if (!matchesSearch) return false;
+
+        if (currentFilter === 'active') return !isCompleted;
+        if (currentFilter === 'completed') return isCompleted;
+        if (currentFilter === 'dueSoon') return !isCompleted && dueStatus && dueStatus.isUrgent;
+        return true;
+      });
+
+      // Hitung ringkasan
+      installments.forEach(item => {
+        const isCompleted = item.paidTenor >= item.totalTenor;
+        const dueStatus = getDueStatus(item.dueDay);
+
+        totalPaidAll += (item.paidTenor * item.monthlyAmount);
+
+        if (!isCompleted) {
+          totalMonthly += Number(item.monthlyAmount);
+          const remainingMonths = item.totalTenor - item.paidTenor;
+          totalRemaining += (remainingMonths * Number(item.monthlyAmount));
+          if (dueStatus && dueStatus.isUrgent) {
+            urgentDueCount++;
+          }
+        }
+      });
+
+      document.getElementById('statMonthly').innerText = formatRupiah(totalMonthly);
+      document.getElementById('statTotalRemaining').innerText = formatRupiah(totalRemaining);
+      document.getElementById('statTotalPaid').innerText = formatRupiah(totalPaidAll);
+      document.getElementById('statDueSoon').innerText = `${urgentDueCount} Tagihan`;
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      filtered.forEach(item => {
+        const isCompleted = item.paidTenor >= item.totalTenor;
+        const remainingMonths = Math.max(0, item.totalTenor - item.paidTenor);
+        const percent = Math.min(100, Math.round((item.paidTenor / item.totalTenor) * 100));
+        const due = getDueStatus(item.dueDay);
+        const estimatedFinish = getCompletionDate(item.startMonth, item.totalTenor);
+
+        const card = document.createElement('div');
+        card.className = `bg-white rounded-2xl p-5 border ${due && due.isUrgent && !isCompleted ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-200'} shadow-sm flex flex-col justify-between hover:shadow-md transition`;
+
+        card.innerHTML = `
+          <div>
+            <!-- Header Card -->
+            <div class="flex justify-between items-start gap-2 mb-2">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                ${item.provider}
+              </span>
+              <div class="flex items-center gap-1">
+                ${due ? `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full ${due.color}">${due.label}</span>` : ''}
+                <button onclick="editItem('${item.id}')" class="p-1 text-slate-400 hover:text-indigo-600 transition" title="Edit">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteItem('${item.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition" title="Hapus">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="font-bold text-slate-800 text-base leading-snug">${item.itemName}</h4>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-1">${item.notes || 'Tanpa catatan tambahan'}</p>
+
+            <!-- Box Tagihan -->
+            <div class="mt-4 p-3 bg-slate-50 rounded-xl space-y-1.5 border border-slate-100">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-500">Cicilan / Bulan</span>
+                <span class="font-bold text-slate-800 text-sm">${formatRupiah(item.monthlyAmount)}</span>
+              </div>
+              <div class="flex justify-between items-center text-[11px] text-slate-500">
+                <span>Total Hutang</span>
+                <span>${formatRupiah(item.totalTenor * item.monthlyAmount)}</span>
+              </div>
+              ${estimatedFinish ? `
+              <div class="flex justify-between items-center text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                <span>Estimasi Lunas</span>
+                <span class="font-medium text-indigo-600">${estimatedFinish}</span>
+              </div>` : ''}
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mt-4">
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span class="text-slate-600">Bulan ke-${item.paidTenor} dari ${item.totalTenor}</span>
+                <span class="${isCompleted ? 'text-emerald-600' : 'text-indigo-600'}">${percent}%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div class="${isCompleted ? 'bg-emerald-500' : 'bg-indigo-600'} h-full transition-all duration-300" style="width: ${percent}%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Footer -->
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div>
+              ${isCompleted 
+                ? '<span class="text-xs font-bold text-emerald-600 flex items-center gap-1"><i data-lucide="party-popper" class="w-4 h-4"></i> LUNAS</span>'
+                : `<div class="text-[11px] text-slate-400">Sisa: <b class="text-slate-700">${remainingMonths}x lagi</b> (${formatRupiah(remainingMonths * item.monthlyAmount)})</div>`
+              }
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              ${item.paidTenor > 0 ? `
+                <button onclick="undoPay('${item.id}')" class="px-2 py-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-medium" title="Kurangi / Batalkan 1x Bayar">
+                  Undo
+                </button>
+              ` : ''}
+              
+              ${!isCompleted ? `
+                <button onclick="payInstallment('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1">
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i> Bayar 1x
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Modal Add & Edit Handling
+    function openModal(editData = null) {
+      const modal = document.getElementById('modalForm');
+      const title = document.getElementById('modalTitle');
+      const form = document.getElementById('cicilanForm');
+      form.reset();
+
+      if (editData) {
+        title.innerText = 'Edit Data Cicilan';
+        document.getElementById('editId').value = editData.id;
+        document.getElementById('itemName').value = editData.itemName;
+        document.getElementById('provider').value = editData.provider;
+        document.getElementById('dueDay').value = editData.dueDay || '';
+        document.getElementById('monthlyAmount').value = editData.monthlyAmount;
+        document.getElementById('totalTenor').value = editData.totalTenor;
+        document.getElementById('paidTenor').value = editData.paidTenor;
+        document.getElementById('startMonth').value = editData.startMonth || '';
+        document.getElementById('notes').value = editData.notes || '';
+      } else {
+        title.innerText = 'Tambah Cicilan Baru';
+        document.getElementById('editId').value = '';
+        // Set default bulan sekarang
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('startMonth').value = `${yyyy}-${mm}`;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modalForm').classList.add('hidden');
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editId').value;
+      const data = {
+        itemName: document.getElementById('itemName').value,
+        provider: document.getElementById('provider').value,
+        dueDay: parseInt(document.getElementById('dueDay').value) || null,
+        monthlyAmount: parseFloat(document.getElementById('monthlyAmount').value) || 0,
+        totalTenor: parseInt(document.getElementById('totalTenor').value) || 1,
+        paidTenor: parseInt(document.getElementById('paidTenor').value) || 0,
+        startMonth: document.getElementById('startMonth').value,
+        notes: document.getElementById('notes').value
+      };
+
+      if (editId) {
+        installments = installments.map(item => item.id === editId ? { ...item, ...data } : item);
+      } else {
+        installments.unshift({ id: Date.now().toString(), ...data });
+      }
+
+      saveStorage();
+      closeModal();
+      renderList();
+    }
+
+    function editItem(id) {
+      const item = installments.find(i => i.id === id);
+      if (item) openModal(item);
+    }
+
+    function payInstallment(id) {
+      installments = installments.map(item => {
+        if (item.id === id && item.paidTenor < item.totalTenor) {
+          return { ...item, paidTenor: item.paidTenor + 1 };
+        }
+        return item;
+      });
+      saveStorage();
+      renderList();
+    }
+
+    function undoPay(id) {
+      installments = installments.map(item => {
+        if (item.id === id && item.paidTenor > 0) {
+          return { ...item, paidTenor: item.paidTenor - 1 };
+        }
+        return item;
+      });
+      saveStorage();
+      renderList();
+    }
+
+    function deleteItem(id) {
+      if (confirm('Yakin ingin menghapus cicilan ini?')) {
+        installments = installments.filter(item => item.id !== id);
+        saveStorage();
+        renderList();
+      }
+    }
+
+    // Fitur Backup & Restore
+    function toggleDataMenu() {
+      const menu = document.getElementById('dataMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    function exportToJSON() {
+      const blob = new Blob([JSON.stringify(installments, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_cicilan_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportToCSV() {
+      let csv = 'Nama Barang,Bank/Platform,Cicilan Per Bulan,Sudah Bayar,Total Tenor,Sisa Bulan,Sisa Tagihan\n';
+      installments.forEach(i => {
+        const remaining = i.totalTenor - i.paidTenor;
+        csv += `"${i.itemName}","${i.provider}",${i.monthlyAmount},${i.paidTenor},${i.totalTenor},${remaining},${remaining * i.monthlyAmount}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rekap_cicilan_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importFromJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            installments = imported;
+            saveStorage();
+            renderList();
+            alert('Data berhasil dipulihkan!');
+            toggleDataMenu();
+          } else {
+            alert('Format file JSON tidak valid.');
+          }
+        } catch (err) {
+          alert('Gagal membaca file JSON.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Inisialisasi awal
+    renderList();
+  </script>
+</body>
+</html>
